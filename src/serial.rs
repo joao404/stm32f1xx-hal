@@ -479,14 +479,30 @@ impl<USART: Instance> Tx<USART> {
     pub fn unlisten(&mut self) {
         unsafe { (*USART::ptr()).cr1.modify(|_, w| w.txeie().clear_bit()) };
     }
+	
+	/// Start listening for transmit completed interrupt event
+    pub fn listen_transmission_complete(&mut self) {
+        unsafe { (*USART::ptr()).cr1.modify(|_, w| w.tcie().set_bit()) };
+    }
+
+    /// Stop listening for transmit completed interrupt event
+    pub fn unlisten_transmission_complete(&mut self) {
+        unsafe { (*USART::ptr()).cr1.modify(|_, w| w.tcie().clear_bit()) };
+    }
 
     /// Returns true if the tx register is empty (and can accept data)
     pub fn is_tx_empty(&self) -> bool {
         unsafe { (*USART::ptr()).sr.read().txe().bit_is_set() }
     }
 
+    /// Returns true if the last transmission has been completed
     pub fn is_tx_complete(&self) -> bool {
         unsafe { (*USART::ptr()).sr.read().tc().bit_is_set() }
+    }
+	
+	    /// Clear transmission complete interrupt flag
+    pub fn clear_transmission_complete_interrupt(&self) {
+        unsafe { (*USART::ptr()).sr.modify(|_, w| w.tc().clear_bit()) }
     }
 }
 
@@ -649,6 +665,8 @@ impl<USART: Instance> embedded_hal::serial::Read<u16> for Rx<USART> {
 pub enum Event {
     /// New data can be sent
     Txe,
+	/// Transmission completed
+    Tc,
     /// New data has been received
     Rxne,
     /// Idle line state detected
@@ -663,6 +681,7 @@ impl<USART: Instance, PINS> Serial<USART, PINS> {
         match event {
             Event::Rxne => self.rx.listen(),
             Event::Txe => self.tx.listen(),
+            Event::Tc => self.tx.listen_transmission_complete(),
             Event::Idle => self.rx.listen_idle(),
         }
     }
@@ -674,6 +693,7 @@ impl<USART: Instance, PINS> Serial<USART, PINS> {
         match event {
             Event::Rxne => self.rx.unlisten(),
             Event::Txe => self.tx.unlisten(),
+			Event::Tc => self.tx.unlisten_transmission_complete(),
             Event::Idle => self.rx.unlisten_idle(),
         }
     }
@@ -697,6 +717,12 @@ impl<USART: Instance, PINS> Serial<USART, PINS> {
     pub fn clear_idle_interrupt(&self) {
         self.rx.clear_idle_interrupt();
     }
+	
+	/// Clear transmission complete interrupt flag
+	pub fn clear_transmission_complete_interrupt(&self) {
+        self.tx.clear_transmission_complete_interrupt();
+    }
+	(
 }
 
 impl<USART: Instance, PINS> embedded_hal::serial::Write<u8> for Serial<USART, PINS> {
