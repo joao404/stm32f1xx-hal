@@ -722,7 +722,6 @@ impl<USART: Instance, PINS> Serial<USART, PINS> {
 	pub fn clear_transmission_complete_interrupt(&self) {
         self.tx.clear_transmission_complete_interrupt();
     }
-	(
 }
 
 impl<USART: Instance, PINS> embedded_hal::serial::Write<u8> for Serial<USART, PINS> {
